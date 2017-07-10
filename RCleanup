@@ -1,0 +1,672 @@
+library("stats", lib.loc="~/R/R-3.3.2/library")
+library("splines", lib.loc="~/R/R-3.3.2/library")
+library(plyr)
+library(dplyr)
+library(stringr)
+library(stringi)
+library(readr)
+library(readxl)
+Raw <- read_csv("Z:/Analytics/ThinCats/Risk/Universe Data/Universe Blind file 2017/THINCATS_201704_EXTRACT.csv",
+                col_types = cols(date_inc = col_date(format = "%Y%m%d"), finexjan15 = col_date(format = "%Y%m%d"), loans15 = col_number(), 
+                                 loans16 = col_number()))
+
+Raw <- read_csv("Z:/Analytics/ThinCats/Risk/Universe Data/17.07.06 Universe Blind file /THINCATS_20170710_EXTRACT.csv",
+                col_types = cols(date_inc = col_date(format = "%Y%m%d"), finexjan15 = col_date(format = "%Y%m%d"), loans15 = col_number(), 
+                                 loans16 = col_number()))
+
+
+
+data<-Raw
+
+#Define loan change function
+
+#Define Total loans change function
+tot_loan_change<-function (a){
+  if(is.na(a[1]) && is.na(a[2])){
+    sum_ab<-NA}
+  else{sum_ab<-sum(c(a[1],a[2]), na.rm=T)}
+  if(is.na(a[3]) && is.na(a[4])){
+    sum_cd<-NA}
+  else{sum_cd<-sum(c(a[3],a[4]), na.rm=T)}
+  if(is.na(sum_ab) && is.na(sum_cd)){
+    result<-NA
+  }
+  else if(!is.na(sum_ab) && is.na(sum_cd)){
+    result<-NA}
+  else if(is.na(sum_ab) && !is.na(sum_cd)){
+    result<-NA}
+  else{result<-sum_ab-sum_cd}
+  return(result)
+}
+
+#Define Percentage Change calculation function
+
+Percentage_Change<-function(Y2,Y1) {
+  return(ifelse(Y1==0|is.na(Y1)|is.na(Y2),NA,as.numeric((Y2-Y1)*100/Y1)))
+}
+
+#Define Ratio function
+
+Ratio<-function(X,Y) {
+  return(ifelse(Y==0|is.na(Y)|is.na(X)|X=="Unknown"|Y=="Unknown",NA,as.numeric(X)/as.numeric(Y)))
+}
+
+#Define Difference function
+
+Difference<-function(X,Y) {
+  return(ifelse(is.na(Y)|is.na(X)|Y=="Unknown"|X=="Unknown",NA,as.numeric(X)-as.numeric(Y)))
+}
+
+###Cash variables###
+
+#Calculate % change in Cash (14/13)
+data$cash_change_14<-(Percentage_Change(data$cash14,data$cash13))
+
+#Calculate Cash14/Totass14 ratio
+data$cash14_totass14<-Ratio(data$cash14,data$totass14)
+
+#Calculate Cash14/Shfun14 ratio
+data$cash14_shfun14<-Ratio(data$cash14,data$shfun14)
+
+#Calculate abs change in cash/totass ratio
+data$cash_totass_change_14<-Difference(Ratio(data$cash14,data$totass14),Ratio(data$cash13,data$totass13))
+
+#Calculate abs change in cash/shfun ratio
+data$cash_shfun_change_14<-Difference(Ratio(data$cash14,data$shfun14),Ratio(data$cash13,data$shfun13))
+
+###Loan variables###
+
+#Calculate % change in Loans (14/13)
+data$loans_change_14<-Percentage_Change(data$loans14,data$loans13)
+
+#Calculate loans14/totass14 ratio
+data$loans14_totass14<-Ratio(data$loans14,data$totass14)
+
+#Calculate loans14/shfun14 ratio
+data$loan14_shfun14<-Ratio(data$loans14,data$shfun14)
+
+#Calculate abs change in loans/totass ratio
+data$loans_totass_change_14<-Difference(Ratio(data$loans14,data$totass14),Ratio(data$loans13,data$totass13))
+
+#Calculate abs change in loans/shfun ratio
+data$loans_shfun_change_14<-Difference(Ratio(data$loans14,data$shfun14),Ratio(data$loans13,data$shfun13))
+
+###Director Loans variables
+
+#Calculate % change in director loans (14/13)
+data$drlncl_change_14<-Percentage_Change(data$drlncl14,data$drlncl13)
+
+#Calculate director loans14/totass14 ratio
+data$drlncl14_totass14<-Ratio(data$drlncl14,data$totass14)
+
+#Calculate director loans14/shfun14 ratio
+data$drlncl14_shfun14<-Ratio(data$drlncl14,data$shfun14)
+
+#Calculate abs change in director loans/totass ratio
+data$drlncl_totass_change_14<-Difference(Ratio(data$drlncl14,data$totass14),Ratio(data$drlncl13,data$totass13))
+
+#Calculate abs change in director loans/shfun ratio
+data$drlncl_shfun_change_14<-Difference(Ratio(data$drlncl14,data$shfun14),Ratio(data$drlncl13,data$shfun13))
+
+###Trade Debtor variables
+
+#Calculate % change in Trade Debtors (14/13)
+data$trdebt_change_14<-Percentage_Change(data$trdebt14,data$trdebt13)
+
+#Calculate Trade Debtors14/totass14 ratio
+data$trdebt14_totass14<-Ratio(data$trdebt14,data$totass14)
+
+#Calculate Trade Debtors14/shfun14 ratio
+data$trdebt14_shfun14<-Ratio(data$trdebt14,data$shfun14)
+
+#Calculate abs change in Trade Debtors/totass ratio
+data$trdebt_totass_change_14<-Difference(Ratio(data$trdebt14,data$totass14),Ratio(data$trdebt13,data$totass13))
+
+#Calculate abs change in Trade Debtors/nw ratio
+data$trdebt_shfun_change_14<-Difference(Ratio(data$trdebt14,data$shfun14),Ratio(data$trdebt13,data$shfun13))
+
+###Trade Creditor variables
+
+#Calculate % change in Trade Creditors (14/13)
+data$trcred_change_14<-Percentage_Change(data$trcred14,data$trcred13)
+
+#Calculate Trade Creditors14/Totass14 ratio
+data$trcred14_totass14<-Ratio(data$trcred14,data$totass14)
+
+#Calculate Trade Creditors14/shfun14 ratio
+data$trcred14_shfun14<-Ratio(data$trcred14,data$shfun14)
+
+#Calculate abs change in Trade Creditors/totass ratio
+data$trcred_totass_change_14<-Difference(Ratio(data$trcred14,data$totass14),Ratio(data$trcred13,data$totass13))
+
+#Calculate abs change in Trade Creditors/shfun ratio
+data$trcred_shfun_change_14<-Difference(Ratio(data$trcred14,data$shfun14),Ratio(data$trcred13,data$shfun13))
+
+#Calculate liquidity ratios
+data$curass14_curlia14<-Ratio(data$curass14,data$curlia14)
+data$totass14_totlia14<-Ratio(data$totass14,data$totlia14)
+
+#Calculate leverage ratios
+data$curass14_shfun14<-Ratio(data$curass14,data$shfun14)
+data$totass14_shfun14<-Ratio(data$totass14,data$shfun14)
+
+#Calculate profitability ratios
+data$profitability_ratio_14<-Ratio(Difference(data$shfun14,data$shfun13),(data$sales14))
+
+#Calculate ROIs
+data$roia<-Ratio(data$sales14,Difference(data$totass14,data$totlia14))
+data$roib<-Ratio(data$sales14,data$totass14)
+
+#Calculate Income Growth
+data$net_income_growth_14<-Ratio(Difference(data$shfun14,data$shfun13),Difference(data$shfun13,data$shfun12))
+
+##create a vector totalassets16/employment16 
+data$totass16_empt16<-Ratio(data$totass16,data$empt16)
+
+##create a vector totalassets15/employment15 
+data$totass15_empt15<-Ratio(data$totass15,data$empt15)
+
+##create a vector totalassets14/employment14 
+data$totass14_empt14<-Ratio(data$totass14,data$empt14)
+
+#median of totalassets16/employment16 (excl. missing values)
+median_ta16_empt16<-median(data$ta16_empt16, na.rm=TRUE)
+
+#Calculate % change in sales for each year
+
+data$sales_change_16<-Percentage_Change(data$sales16,data$sales15)
+data$sales_change_15<-Percentage_Change(data$sales15,data$sales14)
+data$sales_change_14<-Percentage_Change(data$sales14,data$sales13)
+
+#Calculate % change in staff numbers for each year
+
+data$empt_change_16<-Percentage_Change(data$empt16,data$empt15)
+data$empt_change_15<-Percentage_Change(data$empt15,data$empt14)
+data$empt_change_14<-Percentage_Change(data$empt14,data$empt13)
+
+#Calculate % change in SHFunds for 2015
+
+data$shfun_change_15 <- Percentage_Change(data$shfun15,data$shfun14)
+data$shfun_change_14 <- Percentage_Change(data$shfun14,data$shfun13)
+
+#Calculate STGP for 14,15,16
+STGPmappings <- read_csv("Z:/Analytics/ThinCats/Risk/Universe Data/Universe Blind file 2017/STGPmappings.csv")
+data$sales_change_14_band<-cut(as.numeric(data$sales_change_14),breaks=c(-Inf,-5,0,5,20,40,Inf),na.rm=T,labels=c(1,2,3,4,5,6))
+data$empt_change_14_band<-cut(as.numeric(data$empt_change_14),breaks=c(-Inf,-10,-2,2,10,20,Inf),na.rm=T,labels=c(1,2,3,4,5,6))
+data$stgp14id<-as.numeric(data$sales_change_14_band)+as.numeric(data$empt_change_14_band)/10
+data<-left_join(data,select(STGPmappings,ID,STGP),by = c("stgp14id"="ID") )
+data$STGP[is.na(data$STGP)]<-"Unknown"
+names(data)[names(data)=="STGP"] <- "stgp14"
+data$sales_change_14_band<-NULL
+data$empt_change_14_band<-NULL
+data$stgp14id<-NULL
+data$stgp14<-factor(data$stgp14,ordered=FALSE)
+
+data$sales_change_15_band<-cut(as.numeric(data$sales_change_15),breaks=c(-Inf,-5,0,5,20,40,Inf),na.rm=T,labels=c(1,2,3,4,5,6))
+data$empt_change_15_band<-cut(as.numeric(data$empt_change_15),breaks=c(-Inf,-10,-2,2,10,20,Inf),na.rm=T,labels=c(1,2,3,4,5,6))
+data$stgp15id<-as.numeric(data$sales_change_15_band)+as.numeric(data$empt_change_15_band)/10
+data<-left_join(data,select(STGPmappings,ID,STGP),by = c("stgp15id"="ID") )
+data$STGP[is.na(data$STGP)]<-"Unknown"
+names(data)[names(data)=="STGP"] <- "stgp15"
+data$sales_change_15_band<-NULL
+data$empt_change_15_band<-NULL
+data$stgp15id<-NULL
+data$stgp15<-factor(data$stgp15,ordered=FALSE)
+
+data$sales_change_16_band<-cut(as.numeric(data$sales_change_16),breaks=c(-Inf,-5,0,5,20,40,Inf),na.rm=T,labels=c(1,2,3,4,5,6))
+data$empt_change_16_band<-cut(as.numeric(data$empt_change_16),breaks=c(-Inf,-10,-2,2,10,20,Inf),na.rm=T,labels=c(1,2,3,4,5,6))
+data$stgp16id<-as.numeric(data$sales_change_16_band)+as.numeric(data$empt_change_16_band)/10
+data<-left_join(data,select(STGPmappings,ID,STGP),by = c("stgp16id"="ID") )
+data$STGP[is.na(data$STGP)]<-"Unknown"
+names(data)[names(data)=="STGP"] <- "stgp16"
+data$sales_change_16_band<-NULL
+data$empt_change_16_band<-NULL
+data$stgp16id<-NULL
+data$stgp16<-factor(data$stgp16,ordered=FALSE)
+
+#Calculate Long Term Assets for 2015 & 2014
+
+data$lta15 <- Difference(data$totass15,data$curass15)
+data$lta14 <- Difference(data$totass14,data$curass14)
+
+#Calculate LTA/Total Assets for 2015 & 2014
+
+data$lta15_totass15 <-Ratio(data$lta15,data$totass15)
+data$lta14_totass14 <-Ratio(data$lta14,data$totass14)
+
+#Calculate Normalised Cash values
+
+data$cash15_curass15<-Ratio(data$cash15,data$curass15)
+data$cash15_curlia15<-Ratio(data$cash15,data$curlia15)
+data$cash14_curass14<-Ratio(data$cash14,data$curass14)
+data$cash14_curlia14<-Ratio(data$cash14,data$curlia14)
+
+#Calculate Age Bins
+Age_Bins<- c("<2 years","2-5 years","5-8 years","8-23 years",">23 years")
+data$age14 <- cut(as.integer(-(as.Date(data$date_inc)-as.Date("2014-01-01"))), breaks = c(0, 730,1825,2920,8395,Inf), labels = Age_Bins)
+data$age15 <- cut(as.integer(-(as.Date(data$date_inc)-as.Date("2015-01-01"))), breaks = c(0, 730,1825,2920,8395,Inf), labels = Age_Bins)
+data$age16 <- cut(as.integer(-(as.Date(data$date_inc)-as.Date("2016-01-01"))), breaks = c(0, 730,1825,2920,8395,Inf), labels = Age_Bins)
+
+
+#Calculate 14/15 & 13/14 Loan Delta and Bins
+Delta_Loan_Bins<- c("<-100%","-100=>-30%","-30=>-10%","-10=>-2%","-2=>+2%","2=>10%","10=>30%","30-100%",">100%")
+Delta_Loan_Bins_ordered<-c("Unknown","1","2","3","4","5","6","7","8","9")
+
+data$loan_change_15<-Percentage_Change(data$loans15,data$loans14)
+data$loan_change_15_bins <- cut(as.numeric(data$loan_change_15), breaks = c(-Inf,-100,-30,-10,-2,2,10,30,100,Inf), labels = Delta_Loan_Bins,na.rm=T)
+data$loan_change_15_bins <- as.character(data$loan_change_15_bins)
+data$loan_change_15_bins[is.na(data$loan_change_15_bins)]<-"Unknown"
+data$loan_change_15_bins<-factor(data$loan_change_15_bins,levels=c("Unknown",c(Delta_Loan_Bins)))
+
+data$loan_change_14<-Percentage_Change(data$loans14,data$loans13)
+data$loan_change_14_bins <- cut(as.numeric(data$loan_change_14), breaks = c(-Inf,-100,-30,-10,-2,2,10,30,100,Inf), labels = Delta_Loan_Bins,na.rm=T)
+data$loan_change_14_bins <- as.character(data$loan_change_14_bins)
+data$loan_change_14_bins[is.na(data$loan_change_14_bins)]<-"Unknown"
+data$loan_change_14_bins<-factor(data$loan_change_14_bins,levels=c("Unknown",c(Delta_Loan_Bins)))
+
+#Calculate Staff bins
+Staff_Bins<- c("1-5","6-10","11-20","21-50","51-100","101-250","251-500",">500")
+Staff_Bins_ordered<- c("Unknown","1","2","3","4","5","6","7","8")
+
+data$empt15_bins <- cut(as.numeric(data$empt15), breaks = c(0,5,10,20,50,100,250,500,Inf), labels = Staff_Bins,na.rm=T)
+data$empt15_bins <- as.character(data$empt15_bins)
+data$empt15_bins[is.na(data$empt15_bins)]<-"Unknown"
+data$empt15_bins<-factor(data$empt15_bins,levels=c("Unknown",c(Staff_Bins)))
+
+data$empt14_bins <- cut(as.numeric(data$empt14), breaks = c(0,5,10,20,50,100,250,500,Inf), labels = Staff_Bins,na.rm=T)
+data$empt14_bins <- as.character(data$empt14_bins)
+data$empt14_bins[is.na(data$empt14_bins)]<-"Unknown"
+data$empt14_bins<-factor(data$empt14_bins,levels=c("Unknown",c(Staff_Bins)))
+
+#Calculate Total Assets Bins
+totass_bins<- c("0-0.25m","0.25-0.5m","0.5-1m","1-2.5m","2.5-7m","7-20m","20-35m",">35m")
+totass_bins_ordered<- c("Unknown","1","2","3","4","5","6","7","8")
+
+data$totass_15_bins <- cut(as.numeric(data$totass15), breaks = c(-Inf,250000,500000,1000000,2500000,7000000,20000000,35000000,Inf), labels = totass_bins,na.rm=T)
+data$totass_15_bins <- as.character(data$totass_15_bins)
+data$totass_15_bins[is.na(data$totass_15_bins)]<-"Unknown"
+data$totass_15_bins <-factor(data$totass_15_bins,levels=c("Unknown",c(totass_bins)))
+
+data$totass_14_bins <- cut(as.numeric(data$totass14), breaks = c(-Inf,250000,500000,1000000,2500000,7000000,20000000,35000000,Inf), labels = totass_bins,na.rm=T)
+data$totass_14_bins <- as.character(data$totass_14_bins)
+data$totass_14_bins[is.na(data$totass_14_bins)]<-"Unknown"
+data$totass_14_bins <-factor(data$totass_14_bins,levels=c("Unknown",c(totass_bins)))
+
+#borrowers
+data$borrhist_14<-ifelse(is.na(data$loans09)&is.na(data$loans10)&is.na(data$loans11)& is.na(data$loans12)&is.na(data$loans13)&is.na(data$loans14)&is.na(data$drlncl09)&is.na(data$drlncl10)&is.na(data$drlncl11)&is.na(data$drlncl12)&is.na(data$drlncl13)&is.na(data$drlncl14), NA,as.numeric(rowSums(data[,c("loans09","loans10","loans11", "loans12", "loans13", "loans14","drlncl09","drlncl10", "drlncl11", "drlncl12", "drlncl13", "drlncl14")],na.rm=T)))
+
+#Loans in 2015 & 2014 (boolean)
+data$loans15_b<-as.factor(ifelse(data$loans15>0,1,0))
+data$loans14_b<-as.factor(ifelse(data$loans14>0,1,0))
+
+#Director loans in 2014 (boolean)
+data$drlncl14_b<-as.factor(ifelse(data$drlncl14>0,1,0))
+
+#Mortgages in 2014 (boolean)
+data$mort_14_b<-as.factor(ifelse(is.na(data$mort_14),0,1))
+
+#Total loans change 13/14
+data$total_loan_change_14<-as.numeric(apply(data[,c("loans14", "drlncl14","loans13","drlncl13")], 1, function(x) {tot_loan_change(x)} ))
+data$total_loan_change_14_bins <- as.character(cut(as.numeric(data$total_loan_change_14), breaks = c(-Inf,-14107,-288,29,7787,Inf), labels = c("bottom 10%","10-20%","20-80%","80-90%","90-100%"),na.rm=T))
+data$total_loan_change_14_bins[is.na(data$total_loan_change_14_bins)]<-"Unknown"
+data$total_loan_change_14_bins<-factor(data$total_loan_change_14_bins,levels=c("Unknown","bottom 10%","10-20%","20-80%","80-90%","90-100%"))
+
+#Mortgage change 13/14
+data$mort_change_14<-as.factor(ifelse(is.na(data$mort_13)&data$mort_14=="y",1,0))
+
+#check data
+length(which(Raw$mort_14 == "y" & Raw$loans15>0))
+length(which(Raw$mort_14 == "y" & Raw$loans15==0)) 
+length(which(Raw$mort_14 == "y" & is.na(Raw$loans15)))
+length(which(is.na(Raw$mort_14) & Raw$loans15>0))
+length(which(is.na(Raw$mort_14) & Raw$loans15==0))
+length(which(is.na(Raw$mort_14) & is.na(Raw$loans15)))
+
+#--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Define Turbulence function
+Inversion<-function(a,b,c) {
+  ifelse(as.numeric((b-a)*(c-b))<0,1,0)
+}
+
+Inversion_eq<-function(a,b,c) {
+  ifelse(as.numeric((b-a)*(c-b))<0 | ((b-a)==0 & (c-b)!=0) | ((b-a)!=0 & (c-b)==0),1,0)
+}
+
+# Turbulence function which includes zeros
+Turbulence<-function(empt) {
+  empt<-na.omit(empt)
+  if (length(empt)==0|length(empt)==1|length(empt)==2){
+    result<-NA
+  }
+  else{
+    s<-0
+    for(i in 2:(length(empt)-1)) {
+      s<-s+Inversion(empt[i-1],empt[i],empt[i+1])
+    }
+    result<-s
+  }
+  
+  return(result)
+}
+
+#Turbulence function which excludes zeros (USE FOR STAFF TURBULENCE)
+Turbulence_exzero<-function(empt) {
+  empt<-na.omit(empt)
+  empt<-empt[empt!=0]
+  if (length(empt)==0|length(empt)==1|length(empt)==2){
+    result<-NA
+  }
+  else{
+    s<-0
+    for(i in 2:(length(empt)-1)) {
+      s<-s+Inversion(empt[i-1],empt[i],empt[i+1])
+    }
+    result<-s
+  }
+  
+  return(result)
+}
+
+#Turbulence function using Inversion_eq (excluding zeros)
+Turbulence_eq<-function(empt) {
+  empt<-na.omit(empt)
+  empt<-empt[empt!=0]
+  if (length(empt)==0|length(empt)==1|length(empt)==2){
+    result<-NA
+  }
+  else{
+    s<-0
+    for(i in 2:(length(empt)-1)) {
+      s<-s+Inversion_eq(empt[i-1],empt[i],empt[i+1])
+    }
+    result<-s
+  }
+  
+  return(result)
+}
+
+#Define Relative_Inversion (ex zeros)
+
+#Rel_Inversion<-function(a,b,c) {
+  #ifelse(((a+c)/2)<=b/1.05| ((a+c)/2)>=b/0.95,1,0)
+#}
+
+Rel_Inversion<-function(a,b,c) {
+ifelse((b>=1.05*a & c<=0.95*b)|(b<=0.95*a & c>=1.05*b) ,1,0)
+}
+
+Rel_Turbulence<-function(empt) {
+  empt<-na.omit(empt)
+  empt<-empt[empt!=0]
+  if (length(empt)==0|length(empt)==1|length(empt)==2){
+    result<-NA
+  }
+  else{
+    s<-0
+    for(i in 2:(length(empt)-1)) {
+      s<-s+Rel_Inversion(empt[i-1],empt[i],empt[i+1])
+    }
+    result<-s
+  }
+  
+  return(result)
+}
+
+# Define Turbulence length (How many years do we have data for)
+
+Turbulencelength<-function(empt) {
+  empt<-na.omit(empt)
+  empt<-empt[empt!=0]
+  return(length(empt))
+}
+
+#Calculate employment turbulence 09-14
+
+empturb<-matrix(nrow=length(data$ph_co), ncol=1)
+for (i in 1:length(data$ph_co)){
+  empturb[i]<-Turbulence_exzero(c(data$empt09[i],data$empt10[i],data$empt11[i],data$empt12[i],data$empt13[i],data$empt14[i]))
+}
+data<-cbind(data,empturb)
+
+empturb_inczeros<-matrix(nrow=length(data$ph_co), ncol=1)
+for (i in 1:length(data$ph_co)){
+  empturb_inczeros[i]<-Turbulence(c(data$empt09[i],data$empt10[i],data$empt11[i],data$empt12[i],data$empt13[i],data$empt14[i]))
+}
+data<-cbind(data,empturb_inczeros)
+
+empturb_eq<-matrix(nrow=length(data$ph_co), ncol=1)
+for (i in 1:length(data$ph_co)){
+  empturb_eq[i]<-Turbulence_eq(c(data$empt09[i],data$empt10[i],data$empt11[i],data$empt12[i],data$empt13[i],data$empt14[i]))
+}
+data<-cbind(data,empturb_eq)
+
+
+rel_empturb<-matrix(nrow=length(data$ph_co), ncol=1)
+for (i in 1:length(data$ph_co)){
+  rel_empturb[i]<-Rel_Turbulence(c(data$empt09[i],data$empt10[i],data$empt11[i],data$empt12[i],data$empt13[i],data$empt14[i]))
+}
+data<-cbind(data,rel_empturb)
+
+empturblength<-matrix(nrow=length(data$ph_co), ncol=1)
+for (i in 1:length(data$ph_co)){
+  empturblength[i]<-Turbulencelength(c(data$empt09[i],data$empt10[i],data$empt11[i],data$empt12[i],data$empt13[i],data$empt14[i]))
+}
+data<-cbind(data,empturblength)
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#Calculate loans turbulence 09-14
+
+loansturb<-matrix(nrow=length(data$ph_co), ncol=1)
+for (i in 1:length(data$ph_co)){
+  loansturb[i]<-Turbulence(c(data$loans09[i],data$loans10[i],data$loans11[i],data$loans12[i],data$loans13[i],data$loans14[i]))
+}
+data<-cbind(data,loansturb)
+
+loansturblength<-matrix(nrow=length(data$ph_co), ncol=1)
+for (i in 1:length(data$ph_co)){
+  loansturblength[i]<-Turbulencelength(c(data$loans09[i],data$loans10[i],data$loans11[i],data$loans12[i],data$loans13[i],data$loans14[i]))
+}
+data<-cbind(data,loansturblength)
+
+#Calculate sales turbulence 09-14
+
+salesturb<-matrix(nrow=length(data$ph_co), ncol=1)
+for (i in 1:length(data$ph_co)){
+  salesturb[i]<-Turbulence(c(data$sales09[i],data$sales10[i],data$sales11[i],data$sales12[i],data$sales13[i],data$sales14[i]))
+}
+data<-cbind(data,salesturb)
+
+salesturblength<-matrix(nrow=length(data$ph_co), ncol=1)
+for (i in 1:length(data$ph_co)){
+  salesturblength[i]<-Turbulencelength(c(data$sales09[i],data$sales10[i],data$sales11[i],data$sales12[i],data$sales13[i],data$sales14[i]))
+}
+data<-cbind(data,salesturblength)
+
+#Calculate cash/totass turbulence 09-14
+
+cashtotassturb<-matrix(nrow=length(data$ph_co), ncol=1)
+for (i in 1:length(data$ph_co)){
+  cashtotassturb[i]<-Turbulence(c(data$cash09[i]/data$totass09[i],data$cash10[i]/data$totass10[i],data$cash11[i]/data$totass11[i],data$cash12[i]/data$totass12[i],data$cash13[i]/data$totass13[i],data$cash14[i]/data$totass14[i]))
+}
+data<-cbind(data,cashtotassturb)
+
+#Calculate mortgage turbulence
+
+data$morturb<-ifelse(is.na(data$mort_14)&(data$mort_13=="y"|data$mort_12=="y"|data$mort_11=="y"|data$mort_10=="y"|data$mort_09=="y"),1,ifelse(data$mort_14=="y"&is.na(data$mort_13),1,0))
+
+#Calculate HFS
+
+HFS_mappings <- read_csv("Z:/Analytics/ThinCats/Risk/Universe Data/Universe Blind file 2017/HFS mappings.csv", 
+                         col_types = cols(Percentage = col_skip()))
+
+delphi_labels<-c("Suppressed","Dormant","7. Serious Adverse Information","6. Maximum Risk","5. High Risk","4. Above Average Risk","3. Below Average Risk","2. Low Risk","1. Very Low Risk")
+FSS_labels<-c("E-","E+","D-","D+","C-","C+","B-","B+","A-","A+")
+data$fss_band_15<-cut(as.numeric(data$fss_2015),breaks=c(0,6,12,20,30,45,60,75,85,95,100),labels=FSS_labels)
+data$delphi_band_15<-(cut(as.numeric(data$delphi_15),breaks=c(-2,-1,0,1,15,25,50,80,90,100),labels=delphi_labels))
+
+data$fss_band_16<-(cut(as.numeric(data$fss_2016),breaks=c(0,6,12,20,30,45,60,75,85,95,100),labels=FSS_labels))
+data$delphi_band_16<-(cut(as.numeric(data$delphi_16),breaks=c(-2,-1,0,1,15,25,50,80,90,100),labels=delphi_labels))
+
+data$fss_band_15<-as.character(data$fss_band_15)
+data$fss_band_15[is.na(data$fss_band_15)]<-"Unknown"
+data$fss_band_15<-factor(data$fss_band_15,levels= c("Unknown","E-","E+","D-","D+","C-","C+","B-","B+","A-","A+"))
+data$fss_band_16<-as.character(data$fss_band_16)
+data$fss_band_16[is.na(data$fss_band_16)]<-"Unknown"
+data$fss_band_16<-factor(data$fss_band_16,levels= c("Unknown","E-","E+","D-","D+","C-","C+","B-","B+","A-","A+"))
+data$delphi_band_15<-as.character(data$delphi_band_15)
+data$delphi_band_15[is.na(data$delphi_band_15)]<-"Unknown"
+data$delphi_band_15<-factor(data$delphi_band_15, levels=c("Dormant","Suppressed","Unknown","7. Serious Adverse Information","6. Maximum Risk","5. High Risk",
+                                                          "4. Above Average Risk","3. Below Average Risk","2. Low Risk","1. Very Low Risk"))
+                                                        
+data$delphi_band_16<-as.character(data$delphi_band_16)
+data$delphi_band_16[is.na(data$delphi_band_16)]<-"Unknown"
+data$delphi_band_16<-factor(data$delphi_band_16, levels=c("Dormant","Suppressed","Unknown","7. Serious Adverse Information","6. Maximum Risk","5. High Risk",
+                                                          "4. Above Average Risk","3. Below Average Risk","2. Low Risk","1. Very Low Risk"))
+
+
+data$fssdelphi15<-paste(data$fss_band_15,data$delphi_band_15,sep = "")
+data$fssdelphi16<-paste(data$fss_band_16,data$delphi_band_16,sep = "")
+
+data<-left_join(data,HFS_mappings,by = c("fssdelphi15"="FSSDelphi") )
+data<-plyr::rename(data,c("HFS"="hfs2015"))
+
+data<-left_join(data,HFS_mappings,by = c("fssdelphi16"="FSSDelphi") )
+data<-plyr::rename(data,c("HFS"="hfs2016"))
+
+
+#Calculate Growth Trajectory
+#source("Z:\Analytics\ThinCats\Risk\Universe Data\Universe Blind file 2017\growth trajectory.R")
+
+data$acctype_cluster<-ifelse(data$acctype==1|data$acctype==3|data$acctype==4,"A",
+                             ifelse(data$acctype==2|data$acctype==9,"B",
+                                    ifelse(data$acctype==8|data$acctype==16,"C","D"
+                                           )))
+
+# Clusters of Growth 3. Elements of vector: Growth3, hfs2015, shfun14, shfun_change_14
+
+Clustering<-function(vector){
+  
+  if (vector[1]=="?")
+  {
+    cluster<-"d"
+  }
+  
+  else if ((vector[1]=="3++" |  vector[1]=="++/+" | vector[1]=="++/+/=" | vector[1]=="+") && 
+           (vector[2]=="A1" |  vector[2]=="A2" | vector[2]=="B1" | vector[2]=="B2" | vector[2]=="C1" | vector[2]=="C2") &&
+           (!is.na(vector[3]) & vector[3]>0) && (!is.na(vector[4]) & vector[4]>0))
+  {
+    cluster<-"a"
+  }
+  else if ((vector[1]=="+/=" |  vector[1]=="=" | vector[1]=="-/=" | vector[1]=="+/-") && 
+           (vector[2]=="A1" |  vector[2]=="A2" | vector[2]=="B1" | vector[2]=="B2" | vector[2]=="C1" | vector[2]=="C2") &&
+           (!is.na(vector[3]) & vector[3]>0) && (!is.na(vector[4]) & vector[4]>0))
+  {
+    cluster<-"b"
+  }  
+  else
+  {
+    cluster<-"c"
+  }
+  return(cluster)    
+}
+
+clusters_gbss<-matrix(nrow=1000000, ncol=1)
+for (i in 1:1000000){
+  clusters_gbss[i]<-Clustering(c(data$Growth3[i], data$hfs2015[i], data$shfun14[i], data$shfun_change_14[i]))
+}
+data<-cbind(data, clusters_gbss)
+
+#Defining flags
+data$dv_size<-ifelse(is.na(data$loans15) & is.na(data$drlncl15),NA,ifelse(rowSums(data[,c("drlncl15","loans15")],na.rm=T)>300000,1,0))
+data$dv_size[data$mort_15=="y"]<-1
+data$dv_size<-as.factor(data$dv_size)
+
+data$dv_change_mort<-ifelse(is.na(data$mort_14) & data$mort_15=="y",1, ifelse(is.na(data$mort_14)& is.na(data$mort_15)|is.na(data$mort_15) & data$mort_14=="y",NA,0))
+data$dv_change_loans<-ifelse(is.na(data$drlncl14) & is.na(data$loans14)|is.na(data$drlncl15)& is.na(data$loans15), NA, ifelse((rowSums(data[,c("drlncl15","loans15")],na.rm=T)-rowSums(data[,c("drlncl14","loans14")],na.rm=T))>0,1,0))
+dv_change<-matrix(nrow=1000000,ncol=1)
+for(i in (1:1000000)){
+  dv_change[i]<-ifelse(is.na(data$dv_change_mort[i]) & is.na(data$dv_change_loans[i]), NA, max(data$dv_change_loans[i],data$dv_change_mort[i],na.rm =T ))
+}
+data<-cbind(data, dv_change)   
+
+data$deaddate<-as.Date(strtrim(data$deaddate,8),format="%d%m%Y")
+data$days_survived<-data$deaddate-as.Date("2015-01-01")
+data$days_survived<-as.integer(data$days_survived)
+
+
+data$deaddate_bins <- ifelse(data$days_survived<181,"<6m",
+                             ifelse((data$days_survived>181|data$days_survived==181) & data$days_survived<365,"<12m",
+                                    ifelse((data$days_survived>365|data$days_survived==365) & data$days_survived<547,"<18m",
+                                           ifelse((data$days_survived>547|data$days_survived==547) & data$days_survived<731,"<24m",">24m"))))
+data$count<-1
+
+
+#data$finexjan15<-as.Date(strtrim(data$finexjan15,8),format="%Y%m%d")
+data$accfile<-round((as.Date("2015-01-01")-data$finexjan15)/30)
+data$accfile<-as.integer((data$accfile))
+
+###Filtering out companies###
+
+#Remove all with SH funds 15 == 0 (STILL INCLUDES NA's!!!)
+print(paste0("number of records removed: ",length(which(data$shfun15==0))))
+data<-data[!is.na(data[, "shfun15"]), ]
+data<-data[!(data$shfun15==0),]
+
+#Remove all where latest total assets < 500k
+print(paste0("number of records removed: ",length(which(data$totass15 != 0 & data$totass15 < 500000))))
+data<-data[!is.na(data[,"totass15"]), ]
+data <-data[!(ifelse(data$totass15 != 0 & data$totass15 < 500000,TRUE,FALSE)),]
+
+#Remove Listed SIC codes
+
+EXC_SIC_CODES<-c(1010,
+                 1020,
+                 1030,
+                 1110,
+                 1200,
+                 1310,
+                 1320,
+                 1411,
+                 1412,
+                 1413,
+                 1421,
+                 1422,
+                 1430,
+                 1440,
+                 1450,
+                 1600,
+                 2310,
+                 2320,
+                 2330,
+                 6511,
+                 6512,
+                 6521,
+                 6522,
+                 6523,
+                 6601,
+                 6602,
+                 6603,
+                 6711,
+                 6712,
+                 6713,
+                 6720,
+                 7511,
+                 7512,
+                 7513,
+                 7514,
+                 7521,
+                 7522,
+                 7523,
+                 7524,
+                 7525,
+                 7530,
+                 9500,
+                 9900,
+                 9500,
+                 9900
+)
+print(paste0("number of records to be removed: ",length(which(data$uksic03 %in% EXC_SIC_CODES))))
+data<-data[!is.na(data[, "uksic03"]), ]
+data<-data[!(data$uksic03 %in% EXC_SIC_CODES),]
