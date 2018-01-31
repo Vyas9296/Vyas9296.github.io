@@ -1,3 +1,6 @@
+'''This is a draft scrape to extract recipes for a fad diet analysis. Interesting topics such as infinite scroll and 
+next page clicking with selenium is covered, as well as the ubiquitous XPath!'''
+
 from lxml import html,etree,cssselect
 import urllib
 import requests
